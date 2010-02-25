@@ -5,8 +5,8 @@ module MiniMagick
     class Correlation
       attr_reader :x, :y, :likelihood
 
-      def initialize(x, y, likelihood, likelihoods = nil)
-        @x, @y, @likelihood, @likelihoods = x, y, likelihood, likelihoods
+      def initialize(column, row, likelihood, likelihoods = nil)
+        @x, @y, @likelihood, @likelihoods = column, row, likelihood, likelihoods
       end
 
       def <=>(correlation)
@@ -25,23 +25,23 @@ module MiniMagick
     end
 
     def correlate_with(image)
-      correlations = [ 0, 9 ].inject([]) do |a,ic|
-        a << [
-          (0...self.height).inject(0) do |v1,tr|
-            (0...self.width).inject(v1) do |v2,tc|
-              v2 + (image.at(ic + tc, tr) - self.at(tc, tr)).abs
+      correlations = [ 0, 9 ].inject([]) do |results,image_column|
+        results << [
+          (0...self.height).inject(0) do |v1,template_row|
+            (0...self.width).inject(v1) do |v2,template_column|
+              v2 + (image.at(image_column + template_column, template_row) - self.at(template_column, template_row)).abs
             end
           end,
-          ic
+          image_column
         ]
       end
 
-      correlation, correlation_x = correlations.sort { |a,b| a.first <=> b.first }.first
+      correlation, correlation_x = correlations.sort { |left,right| left.first <=> right.first }.first
       Correlation.new(correlation_x, 0, correlation, correlations)
     end
     
-    def at(x, y)
-      @bytes[ (y * self.width) + x ] or raise "(#{ x },#{ y }) = #{ self.inspect }"
+    def at(column, row)
+      @bytes[ (row * self.width) + column ] or raise "(#{ column },#{ row }) = #{ self.inspect }"
     end
 
     def inspect
