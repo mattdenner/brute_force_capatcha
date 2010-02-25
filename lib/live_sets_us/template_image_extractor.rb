@@ -4,10 +4,6 @@ module LiveSetsUS
 
     private
 
-    def handler_for(path)
-      proc { |uri,capatcha_id| handle(uri, capatcha_id, path) }
-    end
-
     def handle(uri, capatcha_id, destination_path)
       image = capatcha_image_for_processing(capatcha_id)
       { :left => '+0+0', :right => '+9+0' }.each do |side,offset|

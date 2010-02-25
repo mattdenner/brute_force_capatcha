@@ -9,13 +9,6 @@ describe LiveSetsUS::TemplateImageExtractor do
     @extractor = described_class.new
   end
 
-  describe '#handler_for' do
-    it 'should pass the path to the handle method' do
-      @extractor.should_receive(:handle).with('uri', 'capatcha id', 'path').and_return(:ok)
-      @extractor.handler_for('path').call('uri', 'capatcha id').should == :ok
-    end
-  end
-
   describe '#handle' do
     def read_image(image)
       File.open(File.expand_path(File.join(File.dirname(__FILE__), '..', 'images', "#{ image }.jpg")), 'rb') do |file|

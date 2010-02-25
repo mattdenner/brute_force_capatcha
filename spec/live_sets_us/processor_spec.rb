@@ -24,6 +24,13 @@ describe LiveSetsUS::Processor do
     end
   end
 
+  describe '#handler_for' do
+    it 'should pass the path to the handle method' do
+      @processor.should_receive(:handle).with('uri', 'capatcha id', 'path').and_return(:ok)
+      @processor.handler_for('path').call('uri', 'capatcha id').should == :ok
+    end
+  end
+
   describe '#process_urls_to' do
     before(:each) do
       @path, @path_exists = 'some/nested/path', true

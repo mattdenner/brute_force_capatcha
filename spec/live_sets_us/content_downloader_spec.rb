@@ -9,13 +9,6 @@ describe LiveSetsUS::ContentDownloader do
     @downloader = described_class.new('/tmp', 1)
   end
 
-  describe '#handler_for' do
-    it 'should pass the path to the handle method' do
-      @downloader.should_receive(:handle).with('uri', 'capatcha id', 'path').and_return(:ok)
-      @downloader.handler_for('path').call('uri', 'capatcha id').should == :ok
-    end
-  end
-
   describe '#download_large_file' do
     it 'should use axel' do
       @downloader.should_receive(:system).with("axel -n 3 -a -o 'destination' 'source'").and_return(:ok)

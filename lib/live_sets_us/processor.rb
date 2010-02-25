@@ -16,6 +16,10 @@ module LiveSetsUS
     end
 
     protected
+    
+    def handler_for(path)
+      proc { |uri,capatcha_id| handle(uri, capatcha_id, path) }
+    end
 
     def process
       raise StandardError, 'No URLs to processor' if self.url_queue.empty?

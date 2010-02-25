@@ -8,10 +8,6 @@ module LiveSetsUS
     end
 
     private
-    
-    def handler_for(path)
-      proc { |uri,capatcha_id| handle(uri, capatcha_id, path) }
-    end
 
     def handle(uri, capatcha_id, path)
       link = nil
