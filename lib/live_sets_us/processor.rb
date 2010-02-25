@@ -1,7 +1,7 @@
 require 'net/http'
 require 'nokogiri'
 
-module LiveSetsUS
+module LiveSetsUS #:nodoc:
   class Processor
     attr_reader :url_queue
     delegate :push, :to => :url_queue
@@ -37,11 +37,11 @@ module LiveSetsUS
       url = URI.parse(uri)
       Net::HTTP.start(url.host, url.port) do |http|
         request = request_class.new(url.path)
-        @headers.each { |h,v| request[ h ] = v }
+        @headers.each { |header,value| request[ header ] = value }
         yield(request) if block_given?
 
         response = http.request(request)
-        store_header(response, 'Set-Cookie', 'Cookie') { |v| v.sub(/;.+$/, '') }
+        store_header(response, 'Set-Cookie', 'Cookie') { |value| value.sub(/;.+$/, '') }
         response
       end
     end

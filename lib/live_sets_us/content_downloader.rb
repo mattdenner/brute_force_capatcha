@@ -39,12 +39,12 @@ module LiveSetsUS
     end
 
     def guess_capatcha_code_in(image)
-      character_scored = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |h,l|
-        correlation_for(l, image) { |template_image| h[ l ] = template_image }
-        h
-      end.to_a.sort do |a,b|
-        compare = b.last <=> a.last
-        compare = a.first <=> b.first if compare == 0
+      character_scored = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |scores,character|
+        correlation_for(character, image) { |template_image| scores[ character ] = template_image }
+        scores
+      end.to_a.sort do |left,right|
+        compare = right.last <=> left.last
+        compare = left.first <=> right.first if compare == 0
         compare
       end
 
@@ -53,7 +53,11 @@ module LiveSetsUS
       [ 
         character_scored[ 0 ], 
         character_scored[ 1 ]
-      ].sort { |(_,c1),(_,c2)| c1.x <=> c2.x }.map { |c,_| c }.join.upcase
+      ].sort do |(_,correlation1),(_,correlation2)| 
+        correlation1.x <=> correlation2.x 
+      end.map do |correlation,_| 
+        correlation
+      end.join.upcase
     end
 
     def correlation_for(character, target_image)
