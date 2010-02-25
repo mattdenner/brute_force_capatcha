@@ -2,6 +2,7 @@ require 'net/http'
 require 'nokogiri'
 
 module LiveSetsUS #:nodoc:
+  # Base class for all classes dealing with the interaction with livesets.us capatchas.
   class Processor
     attr_reader :url_queue
     delegate :push, :to => :url_queue

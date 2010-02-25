@@ -1,4 +1,6 @@
-module LiveSetsUS
+module LiveSetsUS #:nodoc:
+  # An instance of this processor will separate a capatcha into two separate images, which
+  # can then be reviewed to select the most optimum character templates.
   class TemplateImageExtractor < Processor
     alias_method(:extract_to, :process_urls_to)
 

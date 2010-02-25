@@ -1,4 +1,5 @@
-module LiveSetsUS
+module LiveSetsUS #:nodoc:
+  # Downloads the MP3 files after bypassing the capatcha.
   class ContentDownloader < Processor
     alias_method(:download_to, :process_urls_to)
 
