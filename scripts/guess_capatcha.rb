@@ -27,21 +27,18 @@ module MiniMagick
     end
 
     def correlate_with(image)
-      correlations = (0..image.width-self.width).inject([]) do |a,image_column|
-        value = 0
-        (0...self.height).each do |template_row|
-          (0...self.width).each do |template_column|
-            d = 
-              image.at(image_column + template_column, template_row) - 
-              self.at(template_column, template_row)
-
-            value += d.abs
-          end
-        end
-        a << value
+      correlations = [ 0, 9 ].inject([]) do |a,ic|
+        a << [
+          (0...self.height).inject(0) do |v1,tr|
+            (0...self.width).inject(v1) do |v2,tc|
+              v2 + (image.at(ic + tc, tr) - self.at(tc, tr)).abs
+            end
+          end,
+          ic
+        ]
       end
 
-      correlation, correlation_x = correlations.each_with_index.sort { |a,b| a.first <=> b.first }.first
+      correlation, correlation_x = correlations.sort { |a,b| a.first <=> b.first }.first
       Correlation.new(correlation_x, 0, correlation, correlations)
     end
     
