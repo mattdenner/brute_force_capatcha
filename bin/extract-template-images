@@ -1,0 +1,47 @@
+#!/usr/bin/ruby
+$: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
+
+require 'optparse'
+require 'live_sets_us'
+
+def display_help_for(parser)
+  puts parser
+  exit
+end
+
+options = { :times => 10, :directory => 'downloads/template-images' }
+parser = OptionParser.new do |parser|
+  parser.banner = "Usage: #{ $0 } [options] <url>"
+  parser.separator ''
+  parser.separator 'Specific options:'
+
+  parser.on_tail('-h', '--help', 'Display this help') do
+    display_help_for(parser)
+  end
+  parser.on(
+    '-t', '--times COUNT', 
+    Integer, 
+    "Number of times to download (default #{ options[ :times ] })"
+  ) do |times|
+    options[ :times ] = times
+  end
+  parser.on(
+    '-d', '--directory PATH',
+    "Write template images to the specified directory (default #{ options[ :directory ] })"
+  ) do |path|
+    options[ :directory ] = path
+  end
+end
+parser.parse!
+
+url = ARGV.shift or display_help_for(parser)
+
+puts "Processing '#{ url }' ..."
+processor = LiveSetsUS::TemplateImageExtractor.new
+(1..options[ :times ]).each { |_| processor.push(url) }
+processor.extract_to(options[ :directory ])
+
+puts "You should review the image files in #{ options[ :directory ] }.  Select the cleanest"
+puts "images for each character, renaming them to the letter they represent, and discarding"
+puts "any of the others.  For instance, if you have the template image 18123288-left.jpg"
+puts "and it represents the letter 'X' then rename the file to 'X.jpg'."
