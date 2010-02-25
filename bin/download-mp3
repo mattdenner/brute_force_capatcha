@@ -1,0 +1,52 @@
+#!/usr/bin/ruby
+$: << File.expand_path(File.join(File.dirname(__FILE__), '..', 'lib'))
+
+require 'optparse'
+require 'live_sets_us'
+
+def display_help_for(parser)
+  puts parser
+  exit
+end
+
+options = { 
+  :template_directory => 'downloads/template-images',
+  :download_directory => 'downloads/mp3s',
+  :tries => 5
+}
+parser = OptionParser.new do |parser|
+  parser.banner = "Usage: #{ $0 } [options] <url>"
+  parser.separator ''
+  parser.separator 'Specific options:'
+
+  parser.on_tail('-h', '--help', 'Display this help') do
+    display_help_for(parser)
+  end
+  parser.on(
+    '-a', '--attempts COUNT', Integer,
+    "The number of attempts to make before giving up (default #{ options[ :tries ] })"
+  ) do |tries|
+    options[ :tries ] = tries
+  end
+  parser.on(
+    '-d', '--download-to PATH',
+    "The directory to download the files to (default #{ options[ :download_directory ] })"
+  ) do |path|
+    options[ :download_directory ] = path
+  end
+  parser.on(
+    '-t', '--templates-in PATH',
+    "The directory containing the template images (default #{ options[ :template_directory ] })"
+  ) do |path|
+    options[ :template_directory ] = path
+  end
+end
+parser.parse!
+
+ARGV.first or display_help_for(parser)
+
+puts "Processing URLs ..."
+processor = LiveSetsUS::ContentDownloader.new(options[ :template_directory ], options[ :tries ])
+ARGV.each { |url| processor.push(url) }
+processor.download_to(options[ :download_directory ])
+puts "Done!"

@@ -7,7 +7,12 @@ module LiveSetsUS
     delegate :push, :to => :url_queue
 
     def initialize
-      @url_queue = []
+      @url_queue, @headers = [], {}
+    end
+
+    def process_urls_to(path)
+      FileUtils.mkdir_p(path) unless File.directory?(path)
+      process(&handler_for(path))
     end
 
     protected
@@ -16,24 +21,45 @@ module LiveSetsUS
       raise StandardError, 'No URLs to processor' if self.url_queue.empty?
       self.url_queue.each do |uri|
         doc = Nokogiri::HTML(content_for(uri))
-        yield(doc.xpath('//form[@id="frmLogin"]//input[@name="ver5"]').first.attribute('value').to_s)
+        yield(uri, doc.xpath('//form[@id="frmLogin"]//input[@name="ver5"]').first.attribute('value').to_s)
       end
     end
 
     def content_for(uri)
-      Net::HTTP.get(URI.parse(uri))
+      open_http_connection(uri).body
     end
 
-    def download(source_uri, destination, type = :net_http)
-      send("download_with_#{ type }", source_uri, destination)
+    def open_http_connection(uri, request_class = Net::HTTP::Get)
+      url = URI.parse(uri)
+      Net::HTTP.start(url.host, url.port) do |http|
+        request = request_class.new(url.path)
+        @headers.each { |h,v| request[ h ] = v }
+        yield(request) if block_given?
+
+        response = http.request(request)
+        store_header(response, 'Set-Cookie', 'Cookie') { |v| v.sub(/;.+$/, '') }
+        response
+      end
     end
 
-    def download_with_net_http(source_uri, destination)
-      File.open(destination, 'wb') { |file| file.write(content_for(source_uri)) }
+    def store_header(response, response_header, request_header)
+      value = original_value = response[ response_header ]
+      return if original_value.nil?
+      value = yield(value) if block_given?
+      @headers[ request_header ] = value
     end
 
-    def download_with_axel(source_uri, destination)
-      system("axel -n 3 --output='#{ destination }' '#{ source_uri }'")
+    def capatcha_image_for_processing(capatcha_id)
+      image = MiniMagick::Image.from_blob(
+        content_for("http://www.livesets.us/vimages/#{ capatcha_id }.jpg"), 
+        'jpg'
+      )
+      image.combine_options do |steps|
+        steps.colorSpace('Gray')
+        steps.normalize
+        steps.crop('18x12+2+10')
+      end
+      image
     end
   end
 end

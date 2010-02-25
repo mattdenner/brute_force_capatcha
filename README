@@ -1,40 +1,5 @@
-= BRUTE FORCE CAPATCHA BREAKING
+= Brute force capatcha breaking
+This code provides a method for getting past the capatchas on [LiveSets.US](http://livesets.us/) so that I can download the MP3 files from the command line.
 
 == Why?
-I want to be able to script the downloading of some MP3 files from [LiveSets.US](http://livesets.us/) and they seem to use a simple capatcha system.
-
-== How?
-The first thing I noticed is that the capatcha only has 2 letters.
-The second thing I noticed was that I regularly see the same code.
-
-Looking inside the HTML page I found the following form:
-
-<form action="#download" method="post" name="frmLogin" id="frmLogin" AUTOCOMPLETE="OFF" onsubmit="return disableForm(this)">
-<input name="txtNumber" type="text" id="txtNumber" size="3"> 
-<input name="ver5" type="hidden" value="1bc58ce759a298b677a28be0d3d44004">
-<input name="btnLogin" type="submit" id="btnLogin" value="ok"> <IMG SRC="http://www.livesets.us/vimages/1bc58ce759a298b677a28be0d3d44004.jpg"> <BR>
-<small>Enter the verificationcode. Thank you for your time</small>
-</form>
-
-The 'ver5' hidden field has the same value as the image being presented, which makes a lot of sense.  So I wrote a script (scripts/capture_image.rb) which downloads that image, and I downloaded a few images to see what they contain.
-
-Doing this showed that the chances of getting the same 'ver5' code is slim (read: "very unlikely") and that there appears to be no pattern to the value of 'ver5' and the 2 letter code you have to enter.
-
-But it did show that the code is always in the same location on the image and that the size does not vary, nor the font.  Maybe by cropping the image to just the area with the code in it we can do some image processing to determine the code?
-
-=== Correlation
-One image processing technique that may be applicable is 'correlation': essentially locating one image inside another.  It's not an exact science, when you don't know whether the first image really does exist in the second, but let's go with it for a moment.
-
-We can constrain our case to make our life a little easier:
-
-Firstly we can download a number of the images to capture each of the possible letters that may occur.  Each download gives us 2 letters and we only really need to download a few distinct ones, not the entire character base (which is actually unknown).
-
-Secondly we know that the letters only appear in two locations within the capatcha image.  This means that when we perform correlation we only need to look within a few pixels of these locations to find the local maximum.
-
-So I build a script (script/extract_character_images.rb) that takes the capatcha images that have been downloaded by the capture_image script, and pre-processes them.  It converts them to greyscale and normalizes them, before extracting the each of the two characters in the code.  It does not work out which characters are present, that's a job for the person at the keyboard!  The way that it extracts the two characters ensures that, regardless of whether a letter appears on the left or the right, it appears in the same location on the final image; in other words, if A is on the left and A is on the right, then the two images should be identical.
-
-From 30 capatcha images I managed to extract 30 unique characters (A-H,J,K,N,P-Z,4,5).
-
-Finally I created another script (script/guess_capatcha.rb) that does the guessing of a captacha.  Given a capatcha image it performs the correlation with the character codes and makes a best guess at the code.
-
-
+Because I was bored and fancied a challenge?

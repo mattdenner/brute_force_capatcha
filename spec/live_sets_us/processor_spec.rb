@@ -24,35 +24,36 @@ describe LiveSetsUS::Processor do
     end
   end
 
-  describe 'download functionality' do
+  describe '#process_urls_to' do
+    before(:each) do
+      @path, @path_exists = 'some/nested/path', true
+      @processor.should_receive(:process).with(any_args).and_return(:ok)
+      @processor.should_receive(:handler_for).with(@path).and_return(proc { |_| })
+    end
+
+    after(:each) do
+      File.should_receive(:directory?).with(@path).and_return(@path_exists)
+      @processor.process_urls_to(@path).should == :ok
+    end
+
+    it 'should create the path if it does not exist' do
+      @path_exists = false
+      FileUtils.should_receive(:mkdir_p).with(@path)
+    end
+
+    it 'should not create the path if it exists' do
+      # Do nothing, should be ok
+    end
+  end
+
+  describe '#content_for' do
     before(:each) do
       @source_url, @destination = 'http://source.url/', 'destination'
     end
-
-    describe '#content_for' do
-      it 'should retrieve the content' do
-        FakeWeb.register_uri(:get, @source_url, :body => 'content')
-        @processor.content_for(@source_url).should == 'content'
-      end
-    end
- 
-    describe '#download_with_net_http' do
-      it 'should write the downloaded file' do
-        FakeWeb.register_uri(:get, @source_url, :body => 'content')
-        
-        file = mock('file')
-        file.should_receive(:write).with('content')
-        File.should_receive(:open).with(@destination, 'wb').and_yield(file)
-        
-        @processor.download_with_net_http(@source_url, @destination)
-      end
-    end
-
-    describe '#download_with_axel' do
-      it 'should execute the appropriate command' do
-        @processor.should_receive(:system).with("axel -n 3 --output='#{ @destination }' '#{ @source_url }'").and_return(:ok)
-        @processor.download_with_axel(@source_url, @destination).should == :ok
-      end
+    
+    it 'should retrieve the content' do
+      FakeWeb.register_uri(:get, @source_url, :body => 'content')
+      @processor.content_for(@source_url).should == 'content'
     end
   end
 
@@ -75,14 +76,15 @@ describe LiveSetsUS::Processor do
 
     def self.it_should_yield_the_capatcha_id(capatcha_id)
       it "should yield the capatcha ID (#{ capatcha_id })" do
-        handler = mock('handler')
-        handler.should_receive(:call).with(capatcha_id)
-        
         source_url = 'http://source.url/'
+
+        handler = mock('handler')
+        handler.should_receive(:call).with(source_url, capatcha_id)
+        
         FakeWeb.register_uri(:get, source_url, :body => capatcha_page(capatcha_id))
         
         @processor.push(source_url)
-        @processor.process { |a| handler.call(a) }
+        @processor.process { |*args| handler.call(*args) }
       end
     end
     it_should_yield_the_capatcha_id('capatcha id 1')
