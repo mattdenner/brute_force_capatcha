@@ -19,7 +19,7 @@ describe MiniMagick::Image do
         test_image = test_image(capatcha).extract_capatcha
         yield.each do |image,expected|
           correlation = template_image(*image).correlate_with(test_image)
-          expected.each { |v,i| correlation.for(i).should == v }
+          expected.each { |v,i| correlation[ i ].should == v }
         end
       end
     end

@@ -84,8 +84,8 @@ module LiveSetsUS #:nodoc:
       # Build two separate, ordered, lists that contain the likelihoods of each character appearing.
       left_scores, right_scores = {}, {}
       @template_images.correlate_with(image, [ 0, 9 ]).each do |(character,correlation)|
-        left_scores[ character ] = correlation.for(0)
-        right_scores[ character ] = correlation.for(9)
+        left_scores[ character ] = correlation[ 0 ]
+        right_scores[ character ] = correlation[ 9 ]
       end
       left_scores = left_scores.to_a.sort { |(_,left),(_,right)| left <=> right }
       right_scores = right_scores.to_a.sort { |(_,left),(_,right)| left <=> right }

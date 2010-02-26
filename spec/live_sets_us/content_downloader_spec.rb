@@ -71,8 +71,8 @@ describe LiveSetsUS::ContentDownloader do
   describe '#guess_capatcha_code_in' do
     def stub_correlation(name, left_score, right_score)
       correlation = mock(name)
-      correlation.stub(:for).with(0).and_return(left_score)
-      correlation.stub(:for).with(9).and_return(right_score)
+      correlation.stub(:[]).with(0).and_return(left_score)
+      correlation.stub(:[]).with(9).and_return(right_score)
       correlation
     end
 

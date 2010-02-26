@@ -4,16 +4,6 @@ require 'mini_magick'
 module MiniMagick #:nodoc:
   # An instance of this class holds the image data in the raw format.
   class RawImage #:nodoc:
-    class Correlations #:nodoc:
-      def initialize(correlations)
-        @correlations = correlations
-      end
-
-      def for(position)
-        @correlations.find { |value,index| index == position }.first
-      end
-    end
-
     attr_reader :width, :height
 
     def initialize(width, height, bytes)
@@ -21,16 +11,13 @@ module MiniMagick #:nodoc:
     end
 
     def correlate_with(image, range = (0...image.width - self.width))
-      Correlations.new(range.map do |image_column|
-        [
-          (0...self.height).inject(0) do |v1,template_row|
-            (0...self.width).inject(v1) do |v2,template_column|
-              v2 + (image.at(image_column + template_column, template_row) - self.at(template_column, template_row)).abs
-            end
-          end,
-          image_column
-        ]
-      end)
+      range.inject({}) do |correlations,image_column|
+        correlations[ image_column ] =
+          @bytes.each_with_index.inject(0) do |value,(byte,index)|
+            value + (image.at((index % self.width) + image_column, index.div(self.width)) - byte).abs
+          end
+        correlations
+      end
     end
     
     def at(column, row)
