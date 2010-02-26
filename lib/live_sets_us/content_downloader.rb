@@ -1,6 +1,8 @@
 module LiveSetsUS #:nodoc:
   # Downloads the MP3 files after bypassing the capatcha.
   class ContentDownloader < Processor
+    # Simple class to hold multiple template images and the logic to correlate them with
+    # a given test image.
     class CharacterTemplates #:nodoc:
       def initialize
         @characters_to_images = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |map,character|

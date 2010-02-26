@@ -1,8 +1,10 @@
 require 'mini_magick'
 
-module MiniMagick
-  class RawImage
-    class Correlation
+module MiniMagick #:nodoc:
+  # An instance of this class holds the image data in the raw format.
+  class RawImage #:nodoc:
+    # Stores the correlation value for a given position.
+    class Correlation #:nodoc:
       attr_reader :x, :y, :likelihood
 
       def initialize(column, row, likelihood, likelihoods = nil)
@@ -44,12 +46,13 @@ module MiniMagick
       @bytes[ (row * self.width) + column ] or raise "(#{ column },#{ row }) = #{ self.inspect }"
     end
 
-    def inspect
+    def inspect #:nodoc:
       "RawImage(#{ @width }x#{ @height }, #{ @bytes.inspect }(#{ @bytes.length }))"
     end
   end
 
-  class Image
+  # Some extensions to this class to make correlation easier.
+  class Image #:nodoc:
     def to_raw
       image = self.class.from_blob(self.to_blob)
       image.format('r')
