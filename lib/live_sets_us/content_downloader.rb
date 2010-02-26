@@ -15,13 +15,9 @@ module LiveSetsUS #:nodoc:
         raise StandardError, 'There appear to be no template images' if @characters_to_images.empty?
       end
 
-      def correlate_with(image)
+      def correlate_with(*args)
         @characters_to_images.map do |character,template|
-          [ character, template.correlate_with(image) ]
-        end.sort do |left,right|
-          compare = right.last <=> left.last
-          compare = left.first <=> right.first if compare == 0
-          compare
+          [ character, template.correlate_with(*args) ]
         end
       end
     end
@@ -37,7 +33,7 @@ module LiveSetsUS #:nodoc:
 
     alias_method(:download_to, :process_urls_to)
 
-    def initialize(template_image_path, tries)
+    def initialize(template_image_path, tries = 5)
       super()
       @tries, @template_images = tries, self.class.initialize_template_images_from(template_image_path)
     end
@@ -45,42 +41,59 @@ module LiveSetsUS #:nodoc:
     private
 
     def handle(uri, capatcha_id, path)
+      info("Processing #{ uri } ...")
+
       link = retrieve_download_link(uri, capatcha_id)
-      download_large_file(
-        link.attribute('href').to_s,
-        File.join(path, link.content.to_s)
-      )
+      download_large_file(link[ 0 ], File.join(path, link[ 1 ]))
     end
 
     def retrieve_download_link(uri, capatcha_id)
-      @tries.times do |_|
+      @tries.times do |try|
+        debug("Attempt #{ try } for #{ uri } ...")
+
         code = guess_capatcha_code_in(capatcha_image_for_processing(capatcha_id))
         
-        content = open_http_connection(uri, Net::HTTP::Post) do |request|
+        doc = Nokogiri::HTML(open_http_connection(uri, Net::HTTP::Post) do |request|
+          request[ 'Referer' ] = uri
           request.form_data = {
             'txtNumber' => code, 
             'ver5' => capatcha_id, 
             'btnLogin' => 'ok' 
           }
-        end.body
-        
-        link = Nokogiri::HTML(content).xpath('//*[@id="downloadpane"]/a').first
-        return link unless link.nil?
+        end.body)
+
+        # Try to find the link directly, but if that doesn't exist then we need to find the
+        # Javascript and try processing that.
+        link = doc.xpath('//*[@id="downloadpane"]//a').first
+        return [ link.attribute('href').to_s, link.content.to_s ] unless link.nil?
+
+        code = doc.xpath('//*[@id="downloadpane"]//script[@language="Javascript"]').first
+        next if code.nil?
+
+        match = code.content.match(/<a href="([^"]+\.mp3)">([^<]+)<\/a>/i)
+        return [ match[ 1 ], match[ 2 ] ] unless match.nil?
       end
       raise StandardError, "Unable to guess the capatcha for '#{ uri }'"
     end
-
 
     def download_large_file(source_uri, destination)
       system("axel -n 3 -a -o '#{ destination }' '#{ source_uri }'")
     end
 
     def guess_capatcha_code_in(image)
-      @template_images.correlate_with(image).slice(0, 2).sort do |(_,left),(_,right)| 
-        left.x <=> right.x 
-      end.map do |correlation,_| 
-        correlation
-      end.join.upcase
+      # Build two separate, ordered, lists that contain the likelihoods of each character appearing.
+      left_scores, right_scores = {}, {}
+      @template_images.correlate_with(image, [ 0, 9 ]).each do |(character,correlation)|
+        left_scores[ character ] = correlation.for(0)
+        right_scores[ character ] = correlation.for(9)
+      end
+      left_scores = left_scores.to_a.sort { |(_,left),(_,right)| left <=> right }
+      right_scores = right_scores.to_a.sort { |(_,left),(_,right)| left <=> right }
+      
+      debug("Left correlations:  #{ left_scores.inspect }")
+      debug("Right correlations: #{ right_scores.inspect }")
+
+      [ left_scores.first, right_scores.first ].map { |character,_| character }.join.upcase
     end
   end
 end

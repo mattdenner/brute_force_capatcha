@@ -1,5 +1,6 @@
 require 'net/http'
 require 'nokogiri'
+require 'logger'
 
 # Extensions to the Array class
 class Array #:nodoc:
@@ -20,11 +21,11 @@ end
 
 # Extensions to the MiniMagic::Image class
 class MiniMagick::Image #:nodoc:
-  def extract_capatcha
+  def extract_capatcha(crop_to = '18x12+2+10')
     combine_options do |steps|
       steps.colorSpace('Gray')
       steps.normalize
-      steps.crop('18x12+2+10')
+      steps.crop(crop_to)
     end
     self
   end
@@ -34,6 +35,14 @@ end
 module LiveSetsUS #:nodoc:
   # Base class for all classes dealing with the interaction with livesets.us capatchas.
   class Processor
+    def self.logger
+      @@logger ||= Logger.new(STDOUT)
+    end
+    def logger
+      self.class.logger
+    end
+    delegate :debug, :info, :warn, :to => :logger
+
     attr_reader :url_queue
     delegate :push, :to => :url_queue
 
@@ -80,6 +89,7 @@ module LiveSetsUS #:nodoc:
         response.map_header('Set-Cookie') do |value| 
           @headers[ 'Cookie' ] = value.sub(/;.+$/, '')
         end
+        debug("Response headers: #{ @headers.inspect }")
         response
       end
     end

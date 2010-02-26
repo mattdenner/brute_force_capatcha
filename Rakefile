@@ -21,6 +21,6 @@ Jeweler::Tasks.new do |gemspec|
   gemspec.add_bindir('extract-template-images')
 
   %w{ rspec jeweler fakeweb }.each { |d| gemspec.add_development_dependency(d) }
-  %w{ activesupport nokogiri mini_magick }.each { |d| gemspec.add_runtime_dependency(d) }
+  %w{ activesupport nokogiri mattdenner-mini_magick }.each { |d| gemspec.add_runtime_dependency(d) }
 end
 Jeweler::GemcutterTasks.new
