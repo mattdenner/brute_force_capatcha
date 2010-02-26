@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'ostruct'
 
 class LiveSetsUS::ContentDownloader
+  attr_accessor :tries
   expose(:private)
 end
 
@@ -20,8 +21,13 @@ describe LiveSetsUS::ContentDownloader do
     end
   end
 
-  describe '#handle' do
-    it 'should download the expected file' do
+  describe '#retrieve_download_link' do
+    it 'should error if the link is not found' do
+      @downloader.tries = 0
+      lambda { @downloader.retrieve_download_link(:uri, :capatcha_id) }.should raise_error(StandardError)
+    end
+
+    it 'should return the link' do
       FakeWeb.register_uri(
         :post, 'http://some.com/',
         :body => <<-END_OF_PAGE
@@ -37,9 +43,12 @@ describe LiveSetsUS::ContentDownloader do
 
       @downloader.should_receive(:capatcha_image_for_processing).with('capatcha_id').and_return(:image)
       @downloader.should_receive(:guess_capatcha_code_in).with(:image).and_return('CODE')
-      @downloader.should_receive(:download_large_file).with('href', '/tmp/link').and_return(:ok)
-      @downloader.handle('http://some.com/', 'capatcha_id', '/tmp').should == :ok
+      @downloader.retrieve_download_link('http://some.com/', 'capatcha_id').to_s.should == '<a href="href">link</a>'
     end
+  end
+
+  describe '#handle' do
+
   end
 
   describe '#guess_capatcha_code_in' do

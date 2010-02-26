@@ -45,11 +45,17 @@ module LiveSetsUS #:nodoc:
     private
 
     def handle(uri, capatcha_id, path)
-      link = nil
-      (1..@tries).each do |try|
-        code = guess_capatcha_code_in(capatcha_image_for_processing(capatcha_id))
+      link = retrieve_download_link(uri, capatcha_id)
+      download_large_file(
+        link.attribute('href').to_s,
+        File.join(path, link.content.to_s)
+      )
+    end
 
-        url = URI.parse(uri)
+    def retrieve_download_link(uri, capatcha_id)
+      @tries.times do |_|
+        code = guess_capatcha_code_in(capatcha_image_for_processing(capatcha_id))
+        
         content = open_http_connection(uri, Net::HTTP::Post) do |request|
           request.form_data = {
             'txtNumber' => code, 
@@ -59,15 +65,11 @@ module LiveSetsUS #:nodoc:
         end.body
         
         link = Nokogiri::HTML(content).xpath('//*[@id="downloadpane"]/a').first
-        break unless link.nil?
+        return link unless link.nil?
       end
-      raise StandardError, "Unable to guess the capatcha for '#{ uri }'" if link.nil?
-      
-      download_large_file(
-        link.attribute('href').to_s,
-        File.join(path, link.content.to_s)
-      )
+      raise StandardError, "Unable to guess the capatcha for '#{ uri }'"
     end
+
 
     def download_large_file(source_uri, destination)
       system("axel -n 3 -a -o '#{ destination }' '#{ source_uri }'")
