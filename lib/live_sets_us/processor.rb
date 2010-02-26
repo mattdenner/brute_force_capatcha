@@ -9,6 +9,13 @@ class Array #:nodoc:
   end
 end
 
+module Net::HTTPHeader
+  def map_header(response, response_header)
+    value = response[ response_header ]
+    yield(value) unless value.nil?
+  end
+end
+
 module LiveSetsUS #:nodoc:
   # Base class for all classes dealing with the interaction with livesets.us capatchas.
   class Processor
@@ -27,14 +34,19 @@ module LiveSetsUS #:nodoc:
     protected
     
     def handler_for(path)
-      proc { |uri,capatcha_id| handle(uri, capatcha_id, path) }
+      proc do |uri,doc|
+        handle(
+          uri, 
+          doc.xpath('//form[@id="frmLogin"]//input[@name="ver5"]').first.attribute('value').to_s,
+          path
+        )
+      end
     end
 
     def process
       raise StandardError, 'No URLs to processor' if self.url_queue.empty?
       self.url_queue.each_with_action do |uri|
-        doc = Nokogiri::HTML(content_for(uri))
-        yield(uri, doc.xpath('//form[@id="frmLogin"]//input[@name="ver5"]').first.attribute('value').to_s)
+        yield(uri, Nokogiri::HTML(content_for(uri)))
       end
     end
 
@@ -46,20 +58,15 @@ module LiveSetsUS #:nodoc:
       url = URI.parse(uri)
       Net::HTTP.start(url.host, url.port) do |http|
         request = request_class.new(url.path)
-        @headers.each { |header,value| request[ header ] = value }
+        request.initialize_http_header(@headers)
         yield(request) if block_given?
 
         response = http.request(request)
-        store_header(response, 'Set-Cookie', 'Cookie') { |value| value.sub(/;.+$/, '') }
+        response.map_header(response, 'Set-Cookie') do |value| 
+          @headers[ 'Cookie' ] = value.sub(/;.+$/, '')
+        end
         response
       end
-    end
-
-    def store_header(response, response_header, request_header)
-      value = original_value = response[ response_header ]
-      return if original_value.nil?
-      value = yield(value) if block_given?
-      @headers[ request_header ] = value
     end
 
     def capatcha_image_for_processing(capatcha_id)

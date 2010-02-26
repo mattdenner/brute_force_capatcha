@@ -2,6 +2,7 @@ require 'spec_helper'
 
 class LiveSetsUS::Processor
   attr_accessor :url_queue
+  attr_accessor :headers
   expose(:protected)
 end
 
@@ -24,10 +25,50 @@ describe LiveSetsUS::Processor do
     end
   end
 
+  describe '#open_http_connection' do
+    describe 'with request modification' do
+      before(:each) do
+        FakeWeb.register_uri(:get, 'http://some.url/', :body => 'foo')
+        
+        @request = Net::HTTP::Get.new('/')
+        Net::HTTP::Get.should_receive(:new).and_return(@request)
+      end
+
+      it 'should copy any headers into the request' do
+        @request.should_receive(:initialize_http_header).with('Cookie' => 'cookie')
+        @processor.headers[ 'Cookie' ] = 'cookie'
+        @processor.open_http_connection('http://some.url/').body.should == 'foo'
+      end
+
+      it 'should allow you to modify the request' do
+        receiver = mock('block')
+        receiver.should_receive(:received).with(@request)
+        
+        @processor.open_http_connection('http://some.url/') do |request|
+          receiver.received(request)
+        end.body.should == 'foo'
+      end
+    end
+
+    it 'should copy the cookie header from the response' do
+      FakeWeb.register_uri(:get, 'http://some.url/', :body => 'foo', :set_cookie => 'cookie;dough')
+
+      @processor.open_http_connection('http://some.url/').body.should == 'foo'
+      @processor.headers[ 'Cookie' ].should == 'cookie'
+    end
+
+    it 'should allow you to change the request class' do
+      FakeWeb.register_uri(:post, 'http://some.url/', :body => 'foo')
+      @processor.open_http_connection('http://some.url/', Net::HTTP::Post).body.should == 'foo'
+    end
+  end
+
   describe '#handler_for' do
-    it 'should pass the path to the handle method' do
+    it 'should extract the capatcha' do
+      doc = Nokogiri::HTML('<html><body><form id="frmLogin"><input name="ver5" value="capatcha id"/></form></body></html>')
+
       @processor.should_receive(:handle).with('uri', 'capatcha id', 'path').and_return(:ok)
-      @processor.handler_for('path').call('uri', 'capatcha id').should == :ok
+      @processor.handler_for('path').call('uri', doc).should == :ok
     end
   end
 
@@ -81,21 +122,17 @@ describe LiveSetsUS::Processor do
       END_OF_PAGE
     end
 
-    def self.it_should_yield_the_capatcha_id(capatcha_id)
-      it "should yield the capatcha ID (#{ capatcha_id })" do
-        source_url = 'http://source.url/'
-
-        handler = mock('handler')
-        handler.should_receive(:call).with(source_url, capatcha_id)
-        
-        FakeWeb.register_uri(:get, source_url, :body => capatcha_page(capatcha_id))
-        
-        @processor.push(source_url)
-        @processor.process { |*args| handler.call(*args) }
-        @processor.url_queue.should be_empty
-      end
+    it 'should yield the document' do
+      source_url, content = 'http://source.url/', capatcha_page('capatcha id')
+      
+      handler = mock('handler')
+      handler.should_receive(:call).with(source_url, an_instance_of(Nokogiri::HTML::Document))
+      
+      FakeWeb.register_uri(:get, source_url, :body => content)
+      
+      @processor.push(source_url)
+      @processor.process { |*args| handler.call(*args) }
+      @processor.url_queue.should be_empty
     end
-    it_should_yield_the_capatcha_id('capatcha id 1')
-    it_should_yield_the_capatcha_id('capatcha id 2')
   end
 end
