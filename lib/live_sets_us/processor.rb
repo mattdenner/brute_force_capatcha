@@ -10,8 +10,8 @@ class Array #:nodoc:
 end
 
 module Net::HTTPHeader #:nodoc:
-  def map_header(response, response_header)
-    value = response[ response_header ]
+  def map_header(response_header)
+    value = self[ response_header ]
     yield(value) unless value.nil?
   end
 end
@@ -73,7 +73,7 @@ module LiveSetsUS #:nodoc:
         yield(request) if block_given?
 
         response = http.request(request)
-        response.map_header(response, 'Set-Cookie') do |value| 
+        response.map_header('Set-Cookie') do |value| 
           @headers[ 'Cookie' ] = value.sub(/;.+$/, '')
         end
         response
