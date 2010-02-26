@@ -32,7 +32,7 @@ module MiniMagick #:nodoc:
   # Some extensions to this class to make correlation easier.
   class Image #:nodoc:
     def to_raw
-      image = self.class.from_blob(self.to_blob)
+      image = self.class.from_blob(self.to_blob, 'jpg')
       image.format('r')
 
       RawImage.new(self[ :width ], self[ :height ], image.to_blob.bytes.to_a)

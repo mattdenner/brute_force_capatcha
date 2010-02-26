@@ -43,37 +43,46 @@ module LiveSetsUS #:nodoc:
     def handle(uri, capatcha_id, path)
       info("Processing #{ uri } ...")
 
-      link = retrieve_download_link(uri, capatcha_id)
+      link = attempt_retrieve_download_link(uri, capatcha_id)
       download_large_file(link[ 0 ], File.join(path, link[ 1 ]))
     end
 
-    def retrieve_download_link(uri, capatcha_id)
+    def attempt_retrieve_download_link(uri, capatcha_id)
       @tries.times do |try|
         debug("Attempt #{ try } for #{ uri } ...")
-
-        code = guess_capatcha_code_in(capatcha_image_for_processing(capatcha_id))
-        
-        doc = Nokogiri::HTML(open_http_connection(uri, Net::HTTP::Post) do |request|
-          request[ 'Referer' ] = uri
-          request.form_data = {
-            'txtNumber' => code, 
-            'ver5' => capatcha_id, 
-            'btnLogin' => 'ok' 
-          }
-        end.body)
-
-        # Try to find the link directly, but if that doesn't exist then we need to find the
-        # Javascript and try processing that.
-        link = doc.xpath('//*[@id="downloadpane"]//a').first
-        return [ link.attribute('href').to_s, link.content.to_s ] unless link.nil?
-
-        code = doc.xpath('//*[@id="downloadpane"]//script[@language="Javascript"]').first
-        next if code.nil?
-
-        match = code.content.match(/<a href="([^"]+\.mp3)">([^<]+)<\/a>/i)
-        return [ match[ 1 ], match[ 2 ] ] unless match.nil?
+        return retrieve_download_link(uri, capatcha_id) || next
       end
       raise StandardError, "Unable to guess the capatcha for '#{ uri }'"
+    end
+
+    def retrieve_download_link(uri, capatcha_id)
+      code = guess_capatcha_code_in(capatcha_image_for_processing(capatcha_id))
+      
+      doc = Nokogiri::HTML(open_http_connection(uri, Net::HTTP::Post) do |request|
+        request[ 'Referer' ] = uri
+        request.form_data = {
+          'txtNumber' => code, 
+          'ver5' => capatcha_id, 
+          'btnLogin' => 'ok' 
+        }
+      end.body)
+      
+      link_from_anchor(doc) || link_from_script(doc)
+    end
+    
+    def link_from_anchor(doc)
+      link = doc.xpath('//*[@id="downloadpane"]//a').first
+      return nil if link.nil?
+      [ link.attribute('href').to_s, link.content.to_s ]
+    end
+
+    def link_from_script(doc)
+      code = doc.xpath('//*[@id="downloadpane"]//script[@language="Javascript"]').first
+      return nil if code.nil?
+
+      match = code.content.match(/<a href="([^"]+\.mp3)">([^<]+)<\/a>/i)
+      return nil if match.nil?
+      [ match[ 1 ], match[ 2 ] ]
     end
 
     def download_large_file(source_uri, destination)

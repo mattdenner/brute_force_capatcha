@@ -21,23 +21,9 @@ describe LiveSetsUS::ContentDownloader do
     end
   end
 
-  describe '#retrieve_download_link' do
-    it 'should error if the link is not found' do
-      @downloader.tries = 0
-      lambda { @downloader.retrieve_download_link(:uri, :capatcha_id) }.should raise_error(StandardError)
-    end
-
-    describe 'different html' do
-      after(:each) do
-        FakeWeb.register_uri(:post, 'http://some.com/', :body => @body)
-
-        @downloader.should_receive(:capatcha_image_for_processing).with('capatcha_id').and_return(:image)
-        @downloader.should_receive(:guess_capatcha_code_in).with(:image).and_return('CODE')
-        @downloader.retrieve_download_link('http://some.com/', 'capatcha_id').should == [ 'href.mp3', 'link' ]
-      end
-
-      it 'should handle the direct link' do
-        @body = <<-END_OF_PAGE
+  describe '#link_from_anchor' do
+    it 'should return the details from the anchor' do
+      @downloader.link_from_anchor(Nokogiri::HTML(<<-END_OF_PAGE
           <html>
             <body>
               <div id="downloadpane">
@@ -46,10 +32,13 @@ describe LiveSetsUS::ContentDownloader do
             </body>
           </html>
         END_OF_PAGE
-      end
-      
-      it 'should have the javascript link' do
-        @body = <<-END_OF_PAGE
+      )).should == [ 'href.mp3', 'link' ]
+    end
+  end
+
+  describe '#link_from_script' do
+    it 'should return the details from the anchor' do
+      @downloader.link_from_script(Nokogiri::HTML(<<-END_OF_PAGE
           <html>
             <body>
               <div id="downloadpane">
@@ -60,12 +49,39 @@ describe LiveSetsUS::ContentDownloader do
             </body>
           </html>
         END_OF_PAGE
-      end
+      )).should == [ 'href.mp3', 'link' ]
     end
   end
 
-  describe '#handle' do
+  describe '#attempt_retrieve_download_link' do
+    before(:each) do
+      @downloader.tries = 5
+    end
 
+    it 'should repeat for the number of tries' do
+      lambda do
+        @downloader.should_receive(:retrieve_download_link).exactly(5).with('uri', 'capatcha_id').and_return(nil)
+        @downloader.attempt_retrieve_download_link('uri', 'capatcha_id')
+      end.should raise_error(StandardError)
+    end
+
+    it 'should return early if there is a match' do
+      @downloader.should_receive(:retrieve_download_link).exactly(3).with('uri', 'capatcha_id').and_return(nil, nil, :ok)
+      @downloader.attempt_retrieve_download_link('uri', 'capatcha_id').should == :ok
+    end
+  end
+
+  describe '#retrieve_download_link' do
+
+  end
+
+  describe '#handle' do
+    it 'should download the appropriate file' do
+      @downloader.should_receive(:attempt_retrieve_download_link).with('uri', 'capatcha id').and_return([ 'href', 'file' ])
+      @downloader.should_receive(:download_large_file).with('href', 'path/file')
+
+      @downloader.handle('uri', 'capatcha id', 'path')
+    end
   end
 
   describe '#guess_capatcha_code_in' do
