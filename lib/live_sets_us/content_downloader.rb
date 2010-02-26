@@ -4,8 +4,10 @@ module LiveSetsUS #:nodoc:
     # Simple class to hold multiple template images and the logic to correlate them with
     # a given test image.
     class CharacterTemplates #:nodoc:
+      CHARACTER_RANGE = ('a'..'z').to_a + ('0'..'9').to_a
+
       def initialize
-        @characters_to_images = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |map,character|
+        @characters_to_images = CHARACTER_RANGE.inject({}) do |map,character|
           yield(map, character)
           map
         end
@@ -13,10 +15,9 @@ module LiveSetsUS #:nodoc:
       end
 
       def correlate_with(image)
-        @characters_to_images.inject({}) do |scores,(character,template)|
-          scores[ character ] = template.correlate_with(image)
-          scores
-        end.to_a.sort do |left,right|
+        @characters_to_images.map do |character,template|
+          [ character, template.correlate_with(image) ]
+        end.sort do |left,right|
           compare = right.last <=> left.last
           compare = left.first <=> right.first if compare == 0
           compare
