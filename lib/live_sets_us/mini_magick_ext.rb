@@ -1,5 +1,6 @@
 require 'mini_magick'
 
+# Simple image manipulation
 module MiniMagick #:nodoc:
   # An instance of this class holds the image data in the raw format.
   class RawImage #:nodoc:

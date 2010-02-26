@@ -1,6 +1,7 @@
 require 'net/http'
 require 'nokogiri'
 
+# Extensions to the Array class
 class Array #:nodoc:
   def each_with_action(action = :shift)
     while !self.empty?
@@ -9,6 +10,7 @@ class Array #:nodoc:
   end
 end
 
+# Extensions to the Net::HTTPHeader module
 module Net::HTTPHeader #:nodoc:
   def map_header(response_header)
     value = self[ response_header ]
@@ -16,7 +18,8 @@ module Net::HTTPHeader #:nodoc:
   end
 end
 
-class MiniMagick::Image
+# Extensions to the MiniMagic::Image class
+class MiniMagick::Image #:nodoc:
   def extract_capatcha
     combine_options do |steps|
       steps.colorSpace('Gray')
@@ -27,6 +30,7 @@ class MiniMagick::Image
   end
 end
 
+# Contains code dealing with the livesets.us website.
 module LiveSetsUS #:nodoc:
   # Base class for all classes dealing with the interaction with livesets.us capatchas.
   class Processor

@@ -1,3 +1,4 @@
+# Contains code dealing with the livesets.us website.
 module LiveSetsUS #:nodoc:
   # Downloads the MP3 files after bypassing the capatcha.
   class ContentDownloader < Processor
