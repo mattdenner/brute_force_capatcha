@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'ostruct'
 
 class LiveSetsUS::ContentDownloader
   expose(:private)
@@ -6,6 +7,9 @@ end
 
 describe LiveSetsUS::ContentDownloader do
   before(:each) do
+    @templates = mock('template images')
+    described_class.should_receive(:initialize_template_images_from).with('/tmp').and_return(@templates)
+
     @downloader = described_class.new('/tmp', 1)
   end
 
@@ -39,28 +43,33 @@ describe LiveSetsUS::ContentDownloader do
   end
 
   describe '#guess_capatcha_code_in' do
-  end
-
-  describe '#correlation_for' do
-    before(:each) do
-      @yielded = mock('yielded')
-      @exists = true
+    it 'should upcase the characters' do
+      @templates.should_receive(:correlate_with).with(:image).and_return([
+        [ 'l', OpenStruct.new(:x => 0) ],
+        [ 'r', OpenStruct.new(:x => 10) ]
+      ])
+      
+      @downloader.guess_capatcha_code_in(:image).should == 'LR'
     end
 
-    after(:each) do
-      File.should_receive(:exists?).with('/tmp/character.jpg').and_return(@exists)
-      @downloader.correlation_for('character', 'target') { |c| @yielded.call(c) }
+    it 'should order based on the x position' do
+      @templates.should_receive(:correlate_with).with(:image).and_return([
+        [ 'l', OpenStruct.new(:x => 10) ],
+        [ 'r', OpenStruct.new(:x => 0) ]
+      ])
+      
+      @downloader.guess_capatcha_code_in(:image).should == 'RL'
     end
 
-    it 'should not yield if the character template file does not exist' do
-      @exists = false
-    end
-
-    it 'should yield if the character template file exists' do
-      template_image = mock('template image')
-      template_image.should_receive(:correlate_with).with('target').and_return(:correlation)
-      MiniMagick::Image.should_receive(:from_file).with('/tmp/character.jpg').and_return(template_image)
-      @yielded.should_receive(:call).with(:correlation)
+    it 'should select the first two characters' do
+      @templates.should_receive(:correlate_with).with(:image).and_return([
+        [ 'l', OpenStruct.new(:x => 0) ],
+        [ 'r', OpenStruct.new(:x => 10) ],
+        [ 'a', OpenStruct.new(:x => 20) ],
+        [ 'b', OpenStruct.new(:x => 30) ]
+      ])
+      
+      @downloader.guess_capatcha_code_in(:image).should == 'LR'
     end
   end
 end

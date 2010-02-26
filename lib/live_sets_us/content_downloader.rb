@@ -1,11 +1,41 @@
 module LiveSetsUS #:nodoc:
   # Downloads the MP3 files after bypassing the capatcha.
   class ContentDownloader < Processor
+    class CharacterTemplates #:nodoc:
+      def initialize
+        @characters_to_images = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |map,character|
+          yield(map, character)
+          map
+        end
+        raise StandardError, 'There appear to be no template images' if @characters_to_images.empty?
+      end
+
+      def correlate_with(image)
+        @characters_to_images.inject({}) do |scores,(character,template)|
+          scores[ character ] = template.correlate_with(image)
+          scores
+        end.to_a.sort do |left,right|
+          compare = right.last <=> left.last
+          compare = left.first <=> right.first if compare == 0
+          compare
+        end
+      end
+    end
+
+    class << self
+      def initialize_template_images_from(template_image_path) #:nodoc:
+        CharacterTemplates.new do |store,character|
+          filename = File.expand_path(File.join(template_image_path, "#{ character }.jpg"))
+          store[ character ] = MiniMagick::Image.from_file(filename) if File.exists?(filename)
+        end
+      end
+    end
+
     alias_method(:download_to, :process_urls_to)
 
     def initialize(template_image_path, tries)
       super()
-      @template_image_path, @tries = template_image_path, tries
+      @tries, @template_images = tries, self.class.initialize_template_images_from(template_image_path)
     end
 
     private
@@ -40,30 +70,11 @@ module LiveSetsUS #:nodoc:
     end
 
     def guess_capatcha_code_in(image)
-      character_scored = (('a'..'z').to_a + ('0'..'9').to_a).inject({}) do |scores,character|
-        correlation_for(character, image) { |template_image| scores[ character ] = template_image }
-        scores
-      end.to_a.sort do |left,right|
-        compare = right.last <=> left.last
-        compare = left.first <=> right.first if compare == 0
-        compare
-      end
-
-      raise StandardError, 'There appear to be no correlations at all!' if character_scored.empty?
-
-      [ 
-        character_scored[ 0 ], 
-        character_scored[ 1 ]
-      ].sort do |(_,left),(_,right)| 
+      @template_images.correlate_with(image).slice(0, 2).sort do |(_,left),(_,right)| 
         left.x <=> right.x 
       end.map do |correlation,_| 
         correlation
       end.join.upcase
-    end
-
-    def correlation_for(character, target_image)
-      character_filename = File.expand_path(File.join(@template_image_path, "#{ character }.jpg"))
-      yield(MiniMagick::Image.from_file(character_filename).correlate_with(target_image)) if File.exists?(character_filename)
     end
   end
 end
