@@ -92,6 +92,7 @@ describe LiveSetsUS::Processor do
         
         @processor.push(source_url)
         @processor.process { |*args| handler.call(*args) }
+        @processor.url_queue.should be_empty
       end
     end
     it_should_yield_the_capatcha_id('capatcha id 1')

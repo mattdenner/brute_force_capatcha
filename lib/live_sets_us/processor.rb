@@ -1,6 +1,14 @@
 require 'net/http'
 require 'nokogiri'
 
+class Array #:nodoc:
+  def each_with_action(action = :shift)
+    while !self.empty?
+      yield(self.send(action))
+    end
+  end
+end
+
 module LiveSetsUS #:nodoc:
   # Base class for all classes dealing with the interaction with livesets.us capatchas.
   class Processor
@@ -24,7 +32,7 @@ module LiveSetsUS #:nodoc:
 
     def process
       raise StandardError, 'No URLs to processor' if self.url_queue.empty?
-      self.url_queue.each do |uri|
+      self.url_queue.each_with_action do |uri|
         doc = Nokogiri::HTML(content_for(uri))
         yield(uri, doc.xpath('//form[@id="frmLogin"]//input[@name="ver5"]').first.attribute('value').to_s)
       end
