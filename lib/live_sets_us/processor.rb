@@ -9,10 +9,21 @@ class Array #:nodoc:
   end
 end
 
-module Net::HTTPHeader
+module Net::HTTPHeader #:nodoc:
   def map_header(response, response_header)
     value = response[ response_header ]
     yield(value) unless value.nil?
+  end
+end
+
+class MiniMagick::Image
+  def extract_capatcha
+    combine_options do |steps|
+      steps.colorSpace('Gray')
+      steps.normalize
+      steps.crop('18x12+2+10')
+    end
+    self
   end
 end
 
@@ -70,16 +81,10 @@ module LiveSetsUS #:nodoc:
     end
 
     def capatcha_image_for_processing(capatcha_id)
-      image = MiniMagick::Image.from_blob(
+      MiniMagick::Image.from_blob(
         content_for("http://www.livesets.us/vimages/#{ capatcha_id }.jpg"), 
         'jpg'
-      )
-      image.combine_options do |steps|
-        steps.colorSpace('Gray')
-        steps.normalize
-        steps.crop('18x12+2+10')
-      end
-      image
+      ).extract_capatcha
     end
   end
 end

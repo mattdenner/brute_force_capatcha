@@ -54,8 +54,8 @@ module LiveSetsUS #:nodoc:
       [ 
         character_scored[ 0 ], 
         character_scored[ 1 ]
-      ].sort do |(_,correlation1),(_,correlation2)| 
-        correlation1.x <=> correlation2.x 
+      ].sort do |(_,left),(_,right)| 
+        left.x <=> right.x 
       end.map do |correlation,_| 
         correlation
       end.join.upcase
