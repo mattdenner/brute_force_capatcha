@@ -66,7 +66,7 @@ ARGV.first or parser.display_help
 
 puts "Processing URLs ..."
 processor = LiveSetsUS::ContentDownloader.new(options[ :template_directory ], options[ :tries ]) do |from,to| 
-  system(options[ :download_command ].sub(":to:", to).sub(":from:", from)) 
+  system(options[ :download_command ].sub(":to:", "'#{ to }'").sub(":from:", "'#{ from }'")) 
 end
 ARGV.each { |url| processor.push(url) }
 processor.download_to(options[ :download_directory ])
