@@ -7,6 +7,26 @@ Spec::Rake::SpecTask.new do |task|
   task.spec_files = FileList[ 'spec/**/*_spec.rb' ]
 end
 
+require 'rcov'
+require 'metric_fu'
+
+MetricFu::Configuration.run do |config|
+	config.rcov.merge!(
+		:rcov_opts => [
+			"--include spec:lib",
+			"--sort coverage", 
+			"--no-html", 
+			"--text-coverage",
+			"--no-color",
+			"--profile",
+			'--exclude spec:rvm'
+		],
+		:test_files => [
+			'spec/**/*_spec.rb'
+		]
+	)
+end
+
 require 'jeweler'
 
 Jeweler::Tasks.new do |gemspec|
@@ -20,7 +40,7 @@ Jeweler::Tasks.new do |gemspec|
   gemspec.add_bindir('download-mp3')
   gemspec.add_bindir('extract-template-images')
 
-  %w{ rspec jeweler fakeweb }.each { |d| gemspec.add_development_dependency(d) }
+  %w{ rspec reek roodi metric_fu jeweler fakeweb }.each { |d| gemspec.add_development_dependency(d) }
   %w{ activesupport nokogiri mattdenner-mini_magick }.each { |d| gemspec.add_runtime_dependency(d) }
 end
 Jeweler::GemcutterTasks.new

@@ -33,12 +33,18 @@ module LiveSetsUS #:nodoc:
 
     alias_method(:download_to, :process_urls_to)
 
-    def initialize(template_image_path, tries = 5)
+    def initialize(template_directory, tries = 5, &block)
       super()
-      @tries, @template_images = tries, self.class.initialize_template_images_from(template_image_path)
+
+      @downloader = block or raise "You must specify a download handling block"
+      @tries, @template_images = tries, self.class.initialize_template_images_from(template_directory)
     end
 
     private
+
+    def download_large_file(source_uri, destination)
+      @downloader.call(source_uri, destination)
+    end
 
     def handle(uri, capatcha_id, path)
       info("Processing #{ uri } ...")
@@ -83,10 +89,6 @@ module LiveSetsUS #:nodoc:
       match = code.content.match(/<a href="([^"]+\.mp3)">([^<]+)<\/a>/i)
       return nil if match.nil?
       [ match[ 1 ], match[ 2 ] ]
-    end
-
-    def download_large_file(source_uri, destination)
-      system("axel -n 3 -a -o '#{ destination }' '#{ source_uri }'")
     end
 
     def guess_capatcha_code_in(image)

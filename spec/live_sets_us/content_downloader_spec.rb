@@ -11,12 +11,13 @@ describe LiveSetsUS::ContentDownloader do
     @templates = mock('template images')
     described_class.should_receive(:initialize_template_images_from).with('/tmp').and_return(@templates)
 
-    @downloader = described_class.new('/tmp', 1)
+    @callback = mock('callback')
+    @downloader = described_class.new('/tmp', 1) { |*args| @callback.called_with(*args) }
   end
 
   describe '#download_large_file' do
     it 'should use axel' do
-      @downloader.should_receive(:system).with("axel -n 3 -a -o 'destination' 'source'").and_return(:ok)
+      @callback.should_receive(:called_with).with('source', 'destination').and_return(:ok)
       @downloader.download_large_file('source', 'destination').should == :ok
     end
   end
@@ -136,7 +137,8 @@ describe LiveSetsUS::ContentDownloader do
   ROOT_PATH = File.expand_path(File.join(File.dirname(__FILE__), '..', 'images'))
   
   before(:all) do
-    @downloader = described_class.new(File.join(ROOT_PATH, 'template-images'))
+    @callback = mock('callback')
+    @downloader = described_class.new(File.join(ROOT_PATH, 'template-images')) { |*args| @callback.called_with(*args) }
   end
   
   Dir.glob(File.join(ROOT_PATH, 'test-images', '*.jpg')) do |filename|
