@@ -15,7 +15,7 @@ options = {
   :template_directory => 'downloads/template-images',
   :download_directory => 'downloads/mp3s',
   :tries              => 5,
-  :download_command   => %q{axel -n 3 -a -o '#{ to }' '#{ from }'}
+  :download_command   => 'axel -n 3 -a -o :to: :from:'
 }
 parser = OptionParser.new do |parser|
   parser.banner = "Usage: #{ $0 } [options] <url>"
@@ -58,14 +58,16 @@ parser = OptionParser.new do |parser|
 
   parser.separator ''
   parser.separator 'If you are specifying the download command through --download-command, please ensure that you'
-  parser.separator 'use "from" (what is being downloaded) and "to" (where it is downloaded to) as given in the example.'
+  parser.separator 'use ":from:" (what is being downloaded) and ":to:" (where it is downloaded to) as given in the example.'
 end
 parser.parse!
 
 ARGV.first or parser.display_help
 
 puts "Processing URLs ..."
-processor = LiveSetsUS::ContentDownloader.new(options) { |from,to| system(options[ :download_command ]) }
+processor = LiveSetsUS::ContentDownloader.new(options[ :template_directory ], options[ :tries ]) do |from,to| 
+  system(options[ :download_command ].sub(":to:", to).sub(":from:", from)) 
+end
 ARGV.each { |url| processor.push(url) }
 processor.download_to(options[ :download_directory ])
 puts "Done!"
